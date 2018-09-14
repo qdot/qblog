@@ -15,6 +15,35 @@
 (defvar qblog/blog-file-extension nil
   "Extension for filetype of blog posts.")
 
+;; From pelican-mode
+(defun pelican-timestamp-now ()
+  "Generate a Pelican-compatible timestamp."
+  (format-time-string "%Y-%m-%d %H:%M"))
+
+(defun pelican-is-markdown ()
+  "Check if the buffer is likely using Markdown."
+  (eq major-mode 'markdown-mode))
+
+(defun pelican-field (name value)
+  "Helper to format a field NAME and VALUE."
+  (if value (format "%s: %s\n" name value) ""))
+
+(defun pelican-markdown-header (title date status category tags slug)
+  "Generate a Pelican Markdown header.
+
+All parameters but TITLE may be nil to omit them. DATE may be a
+string or 't to use the current date and time."
+  (let ((title (format "Title: %s\n" title))
+        (status (pelican-field "Status" status))
+        (category (pelican-field "Category" category))
+        (tags (pelican-field "Tags" tags))
+        (slug (pelican-field "Slug" slug))
+        (date (if date (format "Date: %s\n"
+                               (if (stringp date) date
+                                   (pelican-timestamp-now)))
+                  "")))
+    (concat title date status tags category slug "\n")))
+
 (defun qblog/slugify (s)
   "Turn a string into a slug."
   (replace-regexp-in-string " " "-"
@@ -26,6 +55,11 @@
           "-"
           slug
           qblog/blog-file-extension))
+
+(defun qblog/format-title-as-directory (slug)
+  (concat (format-time-string "%Y-%m-%d")
+          "-"
+          slug))
 
 (defun qblog/change-title (title)
   )
@@ -54,6 +88,7 @@ name."
      (list blog title slug
            (read-string "Filename: " (qblog/format-title-as-filename slug))
            (read-string "Tags: "))))
+  (make-directory (expand-file-name (concat "~/Pictures/" (qblog/format-title-as-directory slug))))
   (find-file (expand-file-name (concat qblog/blog-base-dir "/" blog "/" qblog/blog-post-dir "/" filename)))
   (markdown-mode)
   (insert (pelican-markdown-header title (pelican-timestamp-now) "draft" nil tags slug)))
@@ -65,9 +100,3 @@ name."
   buffer variables.")
 
 (provide 'qblog)
-
-(setq qblog/blog-base-dir (expand-file-name "~/code/git-projects"))
-(setq qblog/blog-post-dir "/content/posts/")
-(setq qblog/blog-list '("slashdong.org" "nonpolynomial.com" "openyou.org" "feverything.com"))
-(setq qblog/image-base-dir "~/Pictures/")
-(setq qblog/blog-file-extension ".markdown")
